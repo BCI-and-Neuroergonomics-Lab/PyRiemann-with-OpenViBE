@@ -1,5 +1,5 @@
 # PyRiemann-with-OpenViBE
-Example use of PyRiemann with OpenViBe Python scripting box
+Example use of PyRiemann with OpenViBE Python scripting box
 This script aims to decode multi-class motor imagery (e.g., left/right hands, tongue, feet)
 
 Parts (under developing)
