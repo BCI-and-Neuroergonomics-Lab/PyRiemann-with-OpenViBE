@@ -10,5 +10,5 @@ Parts (under developing)
 OpenViBE 3.0.0 and newer has built-in Riemannian geometry, but a bit difficult to modify.
 Graz visualization basically assumes binary classification, so online applications with more than two classes need changes
 
-For pre-processing, only bandpass filtering and datasegmentation are included and variation based trial rejection would be necessary for training.
+For pre-processing, only bandpass filtering and data segmentation are included and variation based trial rejection would be necessary for training.
 <URL>https://github.com/KyunghoWon-GIST/PyRiemann-with-OpenViBE/blob/main/test-Pyriemann.ipynb</URL>
