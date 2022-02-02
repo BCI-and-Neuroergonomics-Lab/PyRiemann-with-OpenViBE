@@ -10,7 +10,6 @@ from scipy import signal
 from scipy.signal import butter, filtfilt, sosfiltfilt
 
 # Pyriemann with OV Python scripting plugin --------------------------------------------------- written by Kyungho Won
-# In the future, constant values will be changed to variables belong to Python scripitng plugin
 #
 # Step
 # 1. Loads covariance matrices estimated using calibration EEG at the beginning and fits MDM (__init__)
