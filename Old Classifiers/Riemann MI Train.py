@@ -121,4 +121,3 @@ print(fname_model, 'saved.')
 out_file = open(fname_model, 'wb')
 pickle.dump(trained, out_file)
 out_file.close()
-
