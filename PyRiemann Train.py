@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+import pickle
 
 # mne import
 from mne import Epochs, pick_types, events_from_annotations
@@ -94,3 +95,14 @@ print('test accuracy is', np.round(mdm_acc, 4))
 df = pd.DataFrame(data=mdm.covmeans_[0], index=raw.ch_names, columns=raw.ch_names)
 plt.matshow(df.corr())
 plt.show()
+
+###################
+# Save Classifier #
+###################
+
+classifier = {'COV': cov_data_train, 'Labels': train_labels}
+fname = input('Enter file name (include subject ID): ')
+path = "./Data/sub01/" + fname + ".pkl"
+out_file = open(path, 'wb')
+pickle.dump(classifier, out_file)
+out_file.close()
