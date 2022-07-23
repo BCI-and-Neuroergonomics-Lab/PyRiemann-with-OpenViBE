@@ -17,52 +17,39 @@ import socket
 from time import time, sleep
 
 # Pyriemann with OV Python scripting plugin --------------------------------------------------- written by Kyungho Won
-# In the future, constant values will be changed to variables belong to Python scripitng plugin
+# In the future, constant values will be changed to variables belong to Python scripting plugin
 #
 # Step
 # 1. Loads covariance matrices estimated using calibration EEG at the beginning and fits MDM (__init__)
 # 2. During test scenario, python scripting module receives the segmented EEG from OpenViBE every epoch (input: signal)
 # 3. In Python scripting plugin, the segmented EEG is band-pass filtered and transformed to a covariance matrix
 # 4. The Fitted MDM predicts the current label with the covariance matrix
-# 5. Python scripting plugin sends stimulution (predicted labels) as an output (output: stimulation)
+# 5. Python scripting plugin sends stimulations (predicted labels) as an output (output: stimulation)
+# 6. Other external modules could be added
 
-# 6. Ohter external modules could be added
-
-def butter_bandpass_filter(data, lowcut, highcut, fs, order):
-	nyq = fs/2
-	low = lowcut/nyq
-	high = highcut/nyq
-	sos = butter(order, [low, high], btype='band', output='sos')
-	# demean before filtering
-	meandat = np.mean(data, axis=1)
-	data = data - meandat[:, np.newaxis]
-	y = sosfiltfilt(sos, data) # zero-phase filter # data: [ch x time]
-	# specify pandlen to make the result the same as Matlab filtfilt()
-	return y
 
 def draw_feedback(nth, nClass):
-	labels_arr = ['STOP','UP','UP','DOWN']
-	mpl.rcParams['toolbar'] = 'None' # Remove tool bar (upper bar)
+	labels_arr = ['LEFT', 'UP', 'UP', 'DOWN']
+	mpl.rcParams['toolbar'] = 'None'  # Remove tool bar (upper bar)
 
 	winsound.Beep(440, 500)
 	plt.clf()
-	plt.plot(0,0)
+	plt.plot(0, 0)
 	ax = plt.gca()
 	ax.set_facecolor('black')
 	plt.xlim([-10, 10])
 	plt.ylim([-10, 10])
 	plt.axis('off')
-	plt.title('Predicted: %s' %(labels_arr[int(nClass)-1]))
+	plt.title('Predicted: %s' % (labels_arr[int(nClass)-1]))
 
-	if nClass == 1: # left
-		#plt.arrow(0,0, 0, -4, width=1)
-		plt.text(0, 0, 'Stop', fontsize=24, ha='center')
-	elif nClass == 2: # right
-		plt.arrow(0,0, 0, 4, width=1)
-	elif nClass == 3: # up
-		plt.arrow(0,0, 0, 4, width=1)
-	elif nClass == 4: # down
-		plt.arrow(0,0, 0, -4, width=1)
+	if nClass == 1:  # left
+		plt.arrow(0, 0, 0, -4, width=1)
+	elif nClass == 2:  # right
+		plt.arrow(0, 0, 0, 4, width=1)
+	elif nClass == 3:  # up
+		plt.arrow(0, 0, 0, 4, width=1)
+	elif nClass == 4:  # down
+		plt.arrow(0, 0, 0, -4, width=1)
 
 
 class MyOVBox(OVBox):
@@ -77,7 +64,7 @@ class MyOVBox(OVBox):
 		self.output[0].append(OVStimulationHeader(0., 0.))
 
 		# dir2move_mod
-		self.dir2move_mod = [b'b', b'f', b'f', b'b'] # left, right, forward, backward
+		self.dir2move_mod = [b'b', b'f', b'f', b'b']  # left, right, forward, backward
 
 		# Load covariance matrices estimated from the calibrated EEG
 		load_file = open(self.setting['Trained model path'], 'rb')
