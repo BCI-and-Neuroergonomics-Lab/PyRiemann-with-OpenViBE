@@ -21,15 +21,12 @@ desired = ["769", "770", "780"]  # , "774"]
 
 # Function for pre-processing EEG data and extracting epochs
 def pymann(raw, desired, tmin, tmax):
-    # set to standard 10 20 montage in case we need it
-    montage = mne.channels.make_standard_montage('standard_1020')
-    raw.set_montage(montage)
 
     picks = pick_types(
         raw.info, meg=False, eeg=True, stim=False, eog=False, exclude='bads')
 
     # Apply band-pass filter
-    raw.filter(7., 35., method='iir', picks=picks)
+    raw.filter(7., 14., method='iir', picks=picks)
 
     events, temp_id = events_from_annotations(raw)
     event_id = [temp_id.get(i) for i in desired]
@@ -62,15 +59,20 @@ def pymann(raw, desired, tmin, tmax):
 # avoid classification of evoked responses by using epochs that start 1s after cue onset
 tmin, tmax = 1.0, 3.5
 
-raw_files = [
-    read_raw_gdf("./Data/sub02/sess02/MI_run01.gdf", preload=True),
-    read_raw_gdf("./Data/sub02/sess02/MI_run02.gdf", preload=True),
-    read_raw_gdf("./Data/sub02/sess02/MI_run03.gdf", preload=True),
-    read_raw_gdf("./Data/sub02/sess02/MI_run04.gdf", preload=True),
-    read_raw_gdf("./Data/sub02/sess02/MI_run05.gdf", preload=True)
+# Configured for Subject #1
+train_files = [
+    read_raw_gdf("./Data/sub01/sess01/MI_run01.gdf", preload=True),  # subject 1 session 1
+    read_raw_gdf("./Data/sub01/sess01/MI_run02.gdf", preload=True),
+    read_raw_gdf("./Data/sub01/sess01/MI_run03.gdf", preload=True),
+    read_raw_gdf("./Data/sub01/sess01/MI_run04.gdf", preload=True),
+    read_raw_gdf("./Data/sub01/sess01/MI_run05.gdf", preload=True),
+
+    read_raw_gdf("./Data/sub01/sess02/MI_run01.gdf", preload=True),  # subject 1 session 2
+    read_raw_gdf("./Data/sub01/sess02/MI_run02.gdf", preload=True),
+    read_raw_gdf("./Data/sub01/sess02/MI_run03.gdf", preload=True),
 ]
 
-raw = concatenate_raws(raw_files)
+raw = concatenate_raws(train_files)
 
 # Train MDM classifier on covariance matrix
 cov_data_train, train_labels = pymann(raw, desired, tmin, tmax)
@@ -78,7 +80,12 @@ mdm = MDM(metric=dict(mean='riemann', distance='riemann'))  # Minimum Distance t
 mdm.fit(cov_data_train, train_labels)
 
 # Now load a new file for the test accuracy
-test_file = read_raw_gdf("./Data/sub02/sess02/MI_run06.gdf", preload=True)
+test_files = [
+    read_raw_gdf("./Data/sub01/sess01/MI_run06.gdf", preload=True),  # subject 1 session 1
+    read_raw_gdf("./Data/sub01/sess02/MI_run04.gdf", preload=True),  # subject 1 session 2
+]
+
+test_file = concatenate_raws(test_files)
 
 # Repeat from before, but with test file
 cov_data_test, test_labels = pymann(test_file, desired, tmin, tmax)
@@ -96,10 +103,11 @@ print('training accuracy is', np.round(mdm_train_acc, 4))
 mdm_acc = np.sum(mdm.predict(cov_data_test) == test_labels) / len(test_labels)
 print('test accuracy is', np.round(mdm_acc, 4))
 
-# Show class #1 correlation matrix, repeat to show others (change [0] to [1], etc)...
-#df = pd.DataFrame(data=mdm.covmeans_[0], index=raw.ch_names, columns=raw.ch_names)
-#plt.matshow(df.corr())
-#plt.show()
+for i in range(3):
+    # Show class i correlation matrix
+    df = pd.DataFrame(data=mdm.covmeans_[i], index=raw.ch_names, columns=raw.ch_names)
+    plt.matshow(df.corr())
+    plt.show()
 
 ###################
 # Save Classifier #

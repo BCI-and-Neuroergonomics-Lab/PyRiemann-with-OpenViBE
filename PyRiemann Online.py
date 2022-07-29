@@ -1,20 +1,16 @@
 import pickle
+
+import mne.filter
 import numpy as np
 import pyriemann
-import sklearn
-import scipy
 import matplotlib as mpl
-mpl.use('Qt5Agg') # for using pyplot (pip install pyqt5)
 import matplotlib.pyplot as plt
-from scipy import signal
-from scipy.signal import butter, filtfilt, sosfiltfilt
 import winsound
-
 # For serial communication with Arudino and etc.
 import serial
-import sys
-import socket
-from time import time, sleep
+
+mpl.use('Qt5Agg')  # for using pyplot (pip install pyqt5)
+
 
 # Pyriemann with OV Python scripting plugin --------------------------------------------------- written by Kyungho Won
 # In the future, constant values will be changed to variables belong to Python scripting plugin
@@ -72,7 +68,7 @@ class MyOVBox(OVBox):
 		self.mdm = pyriemann.classification.MDM()
 		self.mdm.metric = 'Riemann'
 		self.mdm.fit(trained['COV'], trained['Labels'])	
-		print('Training accuracy is', np.sum(self.mdm.predict(trained['COV'])==trained['Labels'])/len(trained['Labels']))
+		print('Training accuracy is', np.sum(self.mdm.predict(trained['COV']) == trained['Labels'])/len(trained['Labels']))
 		print('== Trained COV:', trained['COV'].shape)
 		print('==', self.mdm)
 		print('\n\n')
@@ -83,46 +79,47 @@ class MyOVBox(OVBox):
 		self.filterorder = int(self.setting['filter order'])
 		self.sampling = int(self.setting['sampling rate'])
 		self.isfeedback = self.setting['Feedback']
-		self.ans_mi = [769, 770, 780, 774] # left right up down
+		self.ans_mi = [769, 770, 780]  # , 774] left right up down (removed down for 3 class)
 
 		# To Arduino (sending command 1, 2, 3 or 4)
-		if (self.setting['WheelChairON']=='ON'):
+		if self.setting['WheelChairON'] == 'ON':
 			self.WheelEnabled = True
-			#self.ser = serial.Serial('/dev/ttyACM0', 115200)
-			#print(self.ser.name) # check which port was really used
+			# self.ser = serial.Serial('/dev/ttyACM0', 115200)
+			# print(self.ser.name) # check which port was really used
 
 			# Another way to open serial port
 			self.ser = serial.Serial('COM3', 115200)
-			#self.ser.baudrate = 115200
-			#self.port = 'COM'+self.setting['COM'] # for later use 
-			#self.ser.port = 'COM3'
+			# self.ser.baudrate = 115200
+			# self.port = 'COM'+self.setting['COM'] # for later use
+			# self.ser.port = 'COM3'
 			print(self.ser.name)
 
 			self.ser.readline()
-			self.ser.write(b'p') # profle switch to get control of the wheelchair
+			self.ser.write(b'p')  # profile switch to get control of the wheelchair
 
 		plt.ion()
 
 	def process(self):
-		for chunkIdx in range( len(self.input[0]) ):
+		for chunkIdx in range(len(self.input[0])):
 			# borrowed from python-signal-average.py
-			if(type(self.input[0][chunkIdx]) == OVSignalHeader): # called only once
+			if type(self.input[0][chunkIdx]) == OVSignalHeader:  # called only once
 				self.signalHeader = self.input[0].pop()
 
-			elif(type(self.input[0][chunkIdx]) == OVSignalBuffer): # called every epoch
+			elif type(self.input[0][chunkIdx]) == OVSignalBuffer:  # called every epoch
 				chunk = self.input[0].pop()
 				numpyBuffer = np.array(chunk, dtype=np.float64).reshape(tuple(self.signalHeader.dimensionSizes))
 				# numpyBuffer has [ch x time]
-				numpyBuffer = butter_bandpass_filter(numpyBuffer, self.lowbp, self.highbp, self.sampling, self.filterorder)
+				numpyBuffer = mne.filter.filter_data(numpyBuffer, self.sampling, self.lowbp, self.highbp)
+				# numpyBuffer = butter_bandpass_filter(numpyBuffer, self.lowbp, self.highbp, self.sampling, self.filterorder)
 
-				# Pyriemann only accpets 3D inputs with [nMatrices, nCh, nTime]
+				# Pyriemann only accepts 3D inputs with [nMatrices, nCh, nTime]
 				tmp_roi = [2,  3,  4,  6,  7,  8, 10, 11, 12]
-				cur_input = np.expand_dims(numpyBuffer[tmp_roi,:], axis=0) # now (1, nCh, nTime)
+				cur_input = np.expand_dims(numpyBuffer[tmp_roi, :], axis=0)  # now (1, nCh, nTime)
 				print('check')
 				print(cur_input.shape)
 
 				COV_cur = pyriemann.estimation.Covariances().fit_transform(cur_input)
-				predict_class = self.mdm.predict(COV_cur) # among [1, 2, 3, 4]
+				predict_class = self.mdm.predict(COV_cur)  # among [1, 2, 3]
 				print(predict_class)
 
 				# send stimulation (classified results)
@@ -136,7 +133,7 @@ class MyOVBox(OVBox):
 					draw_feedback(self.nth_trial, predict_class)
 
 				# Feedback to the wheelchair
-				if self.WheelEnabled == True:
+				if self.WheelEnabled:
 					self.ser.write(self.dir2move_mod[int(predict_class)-1])
 								
 	def uninitialize(self):
@@ -146,7 +143,8 @@ class MyOVBox(OVBox):
 		plt.ioff()
 		plt.close()
 
-		if self.WheelEnabled == True:
+		if self.WheelEnabled:
 			self.ser.close()
 
-box = MyOVBox()	# When it ends (the last call)
+
+box = MyOVBox()	 # When it ends (the last call)
